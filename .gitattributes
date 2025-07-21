@@ -3,5 +3,7 @@
 ETL-DATASUS/*.csv filter=lfs diff=lfs merge=lfs -text
 ETL-Detran/*.csv filter=lfs diff=lfs merge=lfs -text
 ETL-Dirtyshop/*.csv filter=lfs diff=lfs merge=lfs -text
+ETL-Detran/dados/acidentes2024_todas_causas_tipos.csv filter=lfs diff=lfs merge=lfs -text
+ETL-Detran/dados_completos.csv filter=lfs diff=lfs merge=lfs -text
 /ETL-Detran/dados/acidentes2024_todas_causas_tipos.csv filter=lfs diff=lfs merge=lfs -text
 /ETL-Detran/dados_completos.csv filter=lfs diff=lfs merge=lfs -text

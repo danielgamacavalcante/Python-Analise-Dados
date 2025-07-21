@@ -1,0 +1,245 @@
+from traceback import print_tb
+
+import numpy
+import pandas as pd
+import matplotlib.pyplot as plt
+from pandas import notnull
+
+"função normal"
+# def somaQuadrados(a,b):
+#     somaQ = a**2 + b**2
+#     return somaQ
+#
+# print(somaQuadrados(2,6))
+#
+# "função lambda"
+# somaQuadrado = lambda a,b: a**2 + b**2
+# print(somaQuadrado(2,6))
+#
+# "============================Método Map====================================="
+# "Lista"
+# "Esse código Python converte uma lista de velocidades em quilômetros por hora (km/h) para milhas por hora (mph)"
+kmh = [40,50,64,73,78,84,95,100,120]
+mph = []
+#
+# for i in kmh:
+#     mph.append(i/1.61)
+#
+# print(mph)
+#
+# "método MAP"
+# mph2 = list(map(lambda x: x/1.61,kmh)) #map(o que ira ser realizado, base de dados a ser utilizada)
+# print(mph2)
+#
+# "==================================List Comprehension=============================================="
+#
+# mph3 = [ x/1.61 for x in kmh]
+# print(mph3)
+#
+# #ex2
+#
+# characters = [i for i in 'Olá mundo.']
+# print(characters)
+#
+# delEspaco = [i for i in characters if i !=' ']
+# print(delEspaco)
+#
+# characters = [i for i in 'Olá mundo.!@$#']
+# print(characters)
+#
+# removeCharacter = [i for i in characters if i.isalpha()]
+# print(removeCharacter)
+#
+# "=======================================Numpy========================================================="
+#
+# b = numpy.array([(1,6,4),(5,7,2),(11,4,2)])
+# print(b)
+# print()
+#
+# c = numpy.zeros((4,3))
+# print(c)
+#
+# one = numpy.ones((5,2))
+# print()
+# print(one)
+#
+# linhaCentral = numpy.eye(10)
+# print(linhaCentral)
+#
+# maximo = b.max()
+# print(maximo)
+#
+# min = b.min()
+# print(min)
+#
+# soma = b.sum()
+# print(soma)
+# "média"
+# print("Média",b.mean())
+# "Desvio Padrão"
+# print("Desvio Padrão",b.std())
+
+"====================================================PANDAS================================================================"
+
+# dados = pd.read_csv('C:/Users/Win 10 Pro/Documents/MEU DOCUMENTOS/CURSOS GERAIS/COMPUTAÇÃO/BASE DE DADOS/athlete_events.csv')
+#
+# print(dados.head(5))
+"-------------------------------------criar um dicionário converter em uma tabela (dataframe)--------------------------------------------------"
+# alunosDIC = {'Nome':['Ricardo','Maria','Mateus','Carla'],
+#           'Notas':[4,7,5.5,9],
+#           'Aprovado':['Não','Sim','Não','Sim']}
+#
+# alunosDF = pd.DataFrame(alunosDIC)
+#
+# print(alunosDF)
+# # print()
+# objeto1 = pd.Series([2,5,7,3,78])
+# print(objeto1)
+# #
+# arrayUniDimensional = numpy.array([1,2,5,6,7,5])
+# # print('Array Unidimensonal:',arrayUniDimensional)
+# # print()
+# objeto2 = pd.Series(arrayUniDimensional)
+# print('Series:',objeto2)
+
+"--------------------------------------------------------------------------------------------------"
+
+# alunosDIC = {'Nome':['Ricardo','Maria','Mateus','Carla'],
+#           'Notas':[4,7,5.5,9],
+#           'Aprovado':['Não','Sim','Não','Sim']}
+#
+# alunosDF = pd.DataFrame(alunosDIC)
+#
+# print(alunosDF.head())
+#
+# print(alunosDF.shape) #informa quantidade de linhas e colunas
+#
+# print(alunosDF.describe())
+"-----------------------------------------------------------------------------------------------------------------------"
+# alunosDIC = {'Nome':['Ricardo','Maria','Mateus','Carla'],
+#           'Notas':[4,7,5.5,9],
+#           'Aprovado':['Não','Sim','Não','Sim']}
+#
+# alunosDF = pd.DataFrame(alunosDIC)
+# # print(alunosDF.loc[2])
+# # print(alunosDF.loc[[0,2]])
+# # print(alunosDF.loc[0:2])
+#
+# # print(alunosDF.loc[alunosDF['Aprovado']=='Sim'])
+#
+# alunosDF.drop('Nome', axis=1, inplace=True) #axis = 1 coluna axis= 0 seria uma linha
+#
+# print(alunosDF)
+"========================================HISTOGRAMAMA==================================================================="
+
+# dados = pd.read_csv(r'C:\Users\Win 10 Pro\Documents\MEU DOCUMENTOS\CURSOS GERAIS\COMPUTAÇÃO\BASE DE DADOS\athlete_events.csv')
+#
+# # print(dados.head(5))
+# #buscar apenas uma linha
+# print(dados.loc[0])
+#
+# # Aumentando o número máximo de colunas exibidas (para demonstração)
+# pd.set_option('display.max_columns', None)
+#
+# # Visualizando as primeiras linhas com todas as colunas
+# print(dados.head(1))
+#
+# # Resetando para o valor padrão ou definindo um novo limite
+# pd.set_option('display.max_columns',10)
+#
+# # Visualizando as primeiras linhas com o novo limite
+# print(dados.head(1))
+
+"------------------------------Gráfico de barras--------------------------------------------------------"
+# dados.hist(column='Weight', bins=100)
+# plt.show()
+#gráfico barras para arrays
+# plt.hist(nome_array, bins=100)
+"-----------------------------Boxplot----------------------------------------------------------------"
+# dados.boxplot(column='Age')
+# dados.boxplot(column=['Age','Height','Weight'])
+# plt.show()
+
+"-----------------------------matplot.pyplot---------------------------------------------------------"
+import matplotlib.pyplot as plt
+
+# x=[1,2,3,4,5,6,7,8,9,10]
+# y=[2,4,6,8,9,11,13,14,16,18]
+#
+# plt.scatter(x,y)
+# plt.show()
+
+# x1 = numpy.arange(0,1000,1) #array variando de 0 até 999 aumentando de 1 em 1
+# plt.plot(x1,x1**2)
+# plt.show()
+#
+# x1 = numpy.arange(-1000,1000,1) #array variando de -1000 até 999 aumentando de 1 em 1
+# plt.plot(x1,x1**2)
+# plt.show()
+
+# x1 = numpy.arange(-1000,1000,1) #array variando de -1000 até 999 aumentando de 1 em 1
+# plt.plot(x1,-x1**3+4)
+# plt.show()
+
+"===============================================================DESAFIO relação altura e peso atletas masculinos==============================================="
+
+dados = pd.read_csv(r'C:\Users\Win 10 Pro\Documents\MEU DOCUMENTOS\CURSOS GERAIS\COMPUTAÇÃO\BASE DE DADOS\athlete_events.csv')
+
+# print(dados.head(5))
+# print(dados.loc[0])
+
+# base_atletas_masculinos = dados.loc[dados['Sex']=='M']
+#
+# plt.scatter(base_atletas_masculinos['Height'],base_atletas_masculinos['Weight'])
+# plt.show()
+
+# Filtrando os dados
+# atletas_masculinos_com_medalhas = dados[(dados['Sex'] == 'M') & (dados['Medal'].notnull()) & (dados['Sport']=='Basketball')]
+#
+# altura_atl = atletas_masculinos_com_medalhas['Medal']
+# peso_alt = atletas_masculinos_com_medalhas['Weight']
+# plt.scatter(altura_atl,peso_alt)
+# plt.show()
+
+"=====================================CONECTAR COM BANCO DE DADOS POSTGRESQL============================================"
+"conecta com postgreSQL e pega tabela converte para um dataframe(com pandas) e salva esse excel em uma pasta"
+
+import pandas as pd
+import psycopg2
+import os
+
+# def select_all(nome_cursor,tabela):
+#     nome_cursor.execute('SELECT * FROM '+ tabela)
+#     return nome_cursor.fetchall()
+#
+# connection = psycopg2.connect(host='localhost',database='biblioteca',user='postgres',password='')
+#
+# cursor = connection.cursor()
+#
+#
+# cursor.execute('SELECT * FROM sessao.livros')
+#
+# print(type(cursor.execute('SELECT * FROM sessao.livros')))
+#
+# usuarios = cursor.fetchall()
+#
+# print(usuarios)
+# print(numpy.array(usuarios))
+
+# Criando um DataFrame Pandas a partir dos resultados da consulta
+# df = pd.DataFrame(usuarios, columns=['id','nome_livro', 'nome_autor', 'ano_publi','tipo'])  # Substitua os nomes das colunas pelos nomes reais da sua tabela
+#
+# print(df.loc[0])
+
+#Definindo o caminho completo do arquivo
+# caminho_diretorio = r'C:/Users/Win 10 Pro/Documents/MEU DOCUMENTOS'  # Substitua pelo caminho desejado
+# nome_arquivo = 'clientes.xlsx'
+# caminho_completo = os.path.join(caminho_diretorio, nome_arquivo)
+#
+# # Exportando para um arquivo Excel
+# df.to_excel(caminho_completo, index=False)
+#
+# cursor.close()
+# connection.close()
+
+

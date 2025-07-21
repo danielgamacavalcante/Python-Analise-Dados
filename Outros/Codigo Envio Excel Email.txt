@@ -1,0 +1,140 @@
+import schedule
+from schedule import repeat,every
+import time
+import pandas as pd
+import os
+import win32com.client as win32
+
+#=====================================================================================================================#
+# schedule.every().monday.at('10:00').do(tarefa)
+# schedule.every().day.at('09:40').do(tarefa)
+# schedule.every(4).weeks.at('09:00').do(tarefa)
+# schedule.every().hour.at(':34').do(tarefa)
+# schedule.every().second.do(tarefa)
+# schedule.every(5).seconds.do(tarefa)
+
+#executa até o horário estipulado
+# schedule.every().second.until('09:45').do(tarefa)
+#====================================================================================================================#
+
+@repeat(every().day.at('16:49:00'))
+def tarefa():
+    print('Iniciou')
+#CONFIG EMAIL
+    lista_emails = []
+    # importa e-mails
+    # os emails que estão contidos em emails.txt são importados para o excel base_emails.xlsx
+    # Obs: Atualiza emails dentro de emails.txt colocando abaixo do emails existente e abrir base_emails.xlsx para atualizar o excel
+    emails = pd.read_excel('C:/Users/Win 10 Pro/Documents/MEU DOCUMENTOS/CURSOS GERAIS/COMPUTAÇÃO/Python/pycharm/automacaoExcelFaturaLoja/emails/base_emails.xlsx')
+
+    # pega somente a coluna com o título, escrito no excel, como Nome
+    # .itertuples() percorrer as linhas de uma tabela
+    for email in emails.itertuples(index=False):
+        lista_emails.append(email.Column1)
+
+    # só para percorrer e ver o que está dentro da lista
+    # for i in lista_emails:
+    #     print(i)
+
+#===================================JUNTAR PLANILHAS EXCEL==================================================================#
+#PEGA AS TABELAS A PARTIR DA 5 LINHA DE CADA TABELA,  QUE ESTÃO DENTRO DO CAMINHO FATO e JUNTA EM UMA ÚNICA TABELA
+    #Caminho para a pasta com os arquivos
+    pasta = r'C:\Users\Win 10 Pro\Documents\Bases\Fato'
+
+    #lista com todos os arquivos dentro da pasta
+    arquivos = [os.path.join(pasta,arquivo) for arquivo in os.listdir(pasta)]
+
+    #tabela começa vazia
+    tabela_final = pd.DataFrame()
+
+    #loop para iterar sobre todos os arquivos
+    #e ir juntando as informações na "tabale_final"
+    for arquivo in arquivos:
+        #lê arquivo excel pulando 4 linhas
+        df = pd.read_excel(arquivo, skiprows=4)
+    #junta inforamçoes do arquivo na tabela
+    tabela_final= pd.concat([tabela_final,df])
+
+    #exporta tabela para uma planilha excel
+    tabela_final.to_excel("dados_completos.xlsx")
+    print(tabela_final)
+    ##################################### FIM DE JUNÇÃO(CONCATENAÇÃO) de TABELAS###################################################
+
+    ####################################### TRATAMENTO DE TABELAS #################################################################
+    #lê tabela pelo caminho
+    tabela_produto = pd.read_excel('C:/Users/Win 10 Pro/Documents/Bases/Dimensão/Produto.xlsx')
+    #pega coluna ID_Produto e Qtde e agrupa pelo ID_Produto somando tudo, repete com o Preco Unitário
+    quantidade = tabela_final[['ID_Produto','Qtde']].groupby('ID_Produto').sum()
+    preco_unitario = tabela_produto[['ID_Produto','Preco_Unitario']].groupby('ID_Produto').sum()
+
+    #criando uma tabela com to_frame(); com o Faturamento Bruto advindo da quantidade * preco unitario
+    tab_fat_bruto = (quantidade['Qtde'] * preco_unitario['Preco_Unitario']).to_frame()
+
+    #renomeia a coluna 0 para Faturamento Total
+    tab_fat_bruto = tab_fat_bruto.rename(columns={0:'Faturamento Total'})
+    print(tab_fat_bruto)
+    ###################################### FIM DE TRATAMENTO TABELAS #############################################################
+    for contato in lista_emails:
+        appOutlook = win32.Dispatch('outlook.application')
+        email = appOutlook.CreateItem(0)
+        email.To = str(contato)
+
+        email.Subject = 'Relatório das lojas'
+        # Corpo do Email é feito em HTML, nele temos a conversão das colunas selecionadas em formato de planilha HTML(to_html)
+        # Depois formatamos(formatters) as colunas com dinheiro colocando o R$ e 2 casas decimais (.2f)
+        email.HTMLBody = f'''
+        <p>Prezados,</p>
+
+        <p>Segue relatório de Vendas por cada Loja.</p>
+
+        <p><strong>Faturamento:</strong></p>
+        {preco_unitario.to_html(formatters={'Preco_Unitario': 'R${:,.2f}'.format})}
+
+        <p><strong>Quantidade Vendida:</strong></p>
+        {quantidade.to_html()}
+
+        <p><strong>Faturamento Total de Produtos em cada Loja:</strong></p>
+        {tab_fat_bruto.to_html(formatters={'Faturamento Total': 'R${:,.2f}'.format})}
+
+        <p>Qualquer dúvida estou à disposição.</p>
+        <p>Att.,</p>
+        <p>Daniel G.</p>
+        '''
+
+        email.Send()
+        time.sleep(1)
+
+while True:
+    schedule.run_pending()
+    time.sleep(1)
+
+
+==============================================================
+
+import pandas as pd
+import psycopg2
+import os
+
+connection = psycopg2.connect(host='localhost',database='biblioteca',user='postgres',password='')
+
+cursor = connection.cursor()
+
+cursor.execute('SELECT * FROM sessao.livros')
+
+usuarios = cursor.fetchall()
+
+print(usuarios)
+
+# Criando um DataFrame Pandas a partir dos resultados da consulta
+df = pd.DataFrame(usuarios, columns=['id','cpf', 'nome', 'telefone','endereco'])  # Substitua os nomes das colunas pelos nomes reais da sua tabela
+
+# Definindo o caminho completo do arquivo
+caminho_diretorio = r'C:/Users/Win 10 Pro/Documents/MEU DOCUMENTOS'  # Substitua pelo caminho desejado
+nome_arquivo = 'clientes.xlsx'
+caminho_completo = os.path.join(caminho_diretorio, nome_arquivo)
+
+# Exportando para um arquivo Excel
+df.to_excel(caminho_completo, index=False)
+
+cursor.close()
+connection.close()

@@ -1,0 +1,166 @@
+import pandas as pd
+
+#Matplotlib: Possui uma série de funções e comandos para exibição de gráficos
+import matplotlib.pyplot as plt
+
+#Numpy: Possui uma série de funções e comandos para trabalharmos com números de forma em geral(formatação, calculos, etc)
+import numpy as np
+
+#Seaborn: Possui uma série de funções e comandos para exibição de gráficos (Visualizações mais robustas do que o Matplotlib)
+import seaborn as sns
+
+#Warnings: Possui detalhes sobre os avisos e alertas que aparecem, porém podemos utiliza-lo também para que os alertas de
+#futuras atualizações e metodos depreciados não sejam exibidos
+import warnings
+warnings.filterwarnings('ignore')
+
+# Locale: Utilizado para formatação de datas, valores, dias de acordo com a região que queremos.
+import locale
+
+def verifica_coluna(nome_coluna,tipo_coluna):
+    # Verifica se há valores diferentes de tipo_coluna(ex:float) na variável nome_coluna (ex:"Preço Unitário")
+    diferentes = df_dados[~df_dados[nome_coluna].apply(lambda x: isinstance(x, tipo_coluna))]
+
+    if not diferentes.empty:
+     print("Existem valores diferentes de ",tipo_coluna," na coluna ",nome_coluna,":")
+     print(diferentes[nome_coluna].unique())  # Mostra os valores únicos encontrados
+    else:
+      print("Todos os valores na coluna 'Preço Unitário' são do tipo float64.")
+
+#comando para destravar a exibição de todas as colunas e linhas
+pd.set_option('display.max_columns',None)
+pd.set_option('display.max_rows',None)
+ 
+# df_dados =  pd.read_excel("C:/Users/Daniel Gama/Documents/Computação/Analise_de_Dados/Base Dados/dados.xlsx")
+df_dados = pd.read_csv("C:/Users/Daniel Gama/Documents/Computação/Analise_de_Dados/Base Dados/Vendas.csv", encoding='utf-8')
+
+#retorna quantidade de linhas e colunas
+print(df_dados.shape)
+print("\n\n=================== Linhas iniciais:\n")
+#primeiras linhas da base de dados
+print(df_dados.head())
+
+#mostra linhas finais da base de dados
+print("\n\n=================== Linhas finais:\n")
+print(df_dados.tail())
+
+#avalia o período das vendas
+inicio = pd.to_datetime(df_dados['Data da Venda']).dt.date.min()
+fim = pd.to_datetime(df_dados['Data da Venda']).dt.date.max()
+print("\n\nPeríodo Vendas:\n")
+print('Período das Vendas - De: ',inicio,' Até:',fim)
+
+#Pega informações da Base de dados como tipo, mostra os nomes das colunas etc
+print('\n\n======================Informações da Base de dados:\n')
+print(df_dados.info())
+
+#agrupa o valor de uma determinada coluna
+# print('\n\n=======================Agrupa uma coluna retornando seu Tamanho:\n')
+# print(df_dados.groupby(['Preço Unitário']).size())
+
+# Verifica se há valores diferentes de float64 na coluna "Preço Unitário"
+verifica_coluna('Preço Unitário',float)
+
+print("=========================================")
+#RETORNA A LINHA QUE POSSUI A COLUNA PREÇO UNITÁRIO COM O VALOR VAZIO
+
+print(df_dados.loc[df_dados['Preço Unitário'] == ' '])
+
+#troca o ' ' por 0
+df_dados.loc[(df_dados['Preço Unitário'] == ' '),'Preço Unitário'] = 0
+
+print("\n\n==================Converte para FLOAT CAMPO PREÇO UNITÁRIO:\n")
+#converte o campo para float64
+df_dados['Preço Unitário'] = df_dados['Preço Unitário'].astype(np.float64)
+
+print(df_dados.info())
+print('\n\n==================================Pega Mediana de Produto_id\n')
+#pega a mediana do Preço Unitário
+mediana = df_dados.loc[:,'Preço Unitário'].median()
+print('Mediana: ',mediana)
+#coloca o valor da mediana no campo 0
+df_dados.loc[(df_dados['Preço Unitário'] == 0), 'Preço Unitário'] = mediana
+
+#verifica se quantas ocorrências do valor 497.895 aparecem na coluna Preço Unitário
+#primeiro isolamos o a coluna com o valor 497.895 para depois agrupar o número de ocorrências pelo número total (size)
+df_filtro = df_dados[df_dados['Preço Unitário']==497.895]
+print('===================Valor filtrado :\n',df_filtro.groupby(['Preço Unitário']).size())
+
+#verifica se existe dados nulos
+print('====================Dados Nulos:\n',df_dados.isnull().sum())
+
+#caso tenha valores null um exemplo para corrigir este valor seria assim:
+# df_dados['Preço Unitário'] = df_dados['Preço Unitário'].fillna((df_dados['Preço Unitário'].median()))
+
+
+#=========================PLOT DE GRÁFICO=====================================
+#apenas de colunas que possuam número, por isso, utilizamos int e float
+print('\n\nPega os nomes das colunas do tipo int64 e float64:\n')
+variaveis_numericas = []
+
+for i in df_dados.columns[0:48].tolist():
+  if df_dados.dtypes[i] == 'int64' or df_dados.dtypes[i] == 'float64':
+    #printa as colunas do tipo int64 e float64
+    print(i,' : ',df_dados.dtypes[i])
+    #armazena os nomes das colunas em uma lista
+    variaveis_numericas.append(i)
+
+print('\n\n',variaveis_numericas,'\n')
+
+
+plt.rcParams['figure.figsize'] = [12.00,14.00] #configura tamanho da tela
+plt.rcParams['figure.autolayout'] = True #coloca o layout como auto
+
+f, axes = plt.subplots(4,2) #4 linhas e 2 colunas
+
+linha = 0
+coluna = 0
+
+for i in variaveis_numericas:
+  sns.boxplot(data = df_dados, y=i, ax=axes[linha][coluna])
+  coluna +=1
+  if coluna == 2:
+    linha +=1
+    coluna=0
+
+plt.show() #mostra o gráfico
+
+print("=============PEGA SOMENTE PREÇO UNITÁRIO COM VALOR MAIOR 900 ordenados do menor para o maior===========")
+# print(df_dados.loc[df_dados['Preço Unitário'] > 900].sort_values(by='Preço Unitário', ascending=True))
+
+#pega o index do valor 948.43 no caso retorna valor 10921
+print(df_dados.loc[df_dados['Preço Unitário']==948.43].index)
+
+#drop do valor 948.43 da coluna Preço Unitário, através do índice deste valor
+df_dados.drop(df_dados.loc[df_dados['Preço Unitário']==948.43].index, inplace=True)
+
+print("Valor 948.43 da coluna Preço Unitário: ",df_dados.loc[df_dados['Preço Unitário']==948.43])
+
+#tratamento da Data:
+locale.setlocale(locale.LC_ALL,'pt_BR.utf8')
+
+df_dados['Data da Venda'] = pd.to_datetime(df_dados['Data da Venda'])
+df_dados['Data da Venda'] = df_dados['Data da Venda'].dt.date
+df_dados['ANO_VENDA'] = pd.DatetimeIndex(df_dados['Data da Venda']).year
+df_dados['MES_VENDA'] = pd.DatetimeIndex(df_dados['Data da Venda']).month
+df_dados['DIA_VENDA'] = pd.DatetimeIndex(df_dados['Data da Venda']).day
+df_dados['DIA_SEMANA_VENDA']  = pd.DatetimeIndex(df_dados['Data da Venda']).day_name(locale = 'pt_BR.utf8')
+
+plt.rcParams['figure.figsize'] = [8.00,8.00] 
+plt.rcParams['figure.autolayout'] = True
+
+df_dados.DIA_SEMANA_VENDA.value_counts().plot(kind='bar', title='Vendas Por Dia da semana', color= ['#1F77B4','#FF7F0E'])
+plt.show()
+
+df_dados.ANO_VENDA.value_counts().plot(kind='bar', title='Vendas Por Ano', color= ['#1F77B4','#FF7F0E'])
+plt.show()
+
+#excluindo coluna Data de Venda
+df_dados.drop('Data da Venda', axis=1,inplace=True)
+
+#criando dummies para machine learning
+df_dados=pd.get_dummies(df_dados)
+
+print(df_dados.head())
+#salvado o novo csv criado
+df_dados.to_csv('dados_tratados.csv', index=False)

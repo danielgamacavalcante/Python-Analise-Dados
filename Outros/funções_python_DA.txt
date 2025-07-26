@@ -1,0 +1,281 @@
+def details_df2(df, opc):
+    try:
+        if opc == 'tamanho':
+            display(f'Tamanho (linhas, colunas): {df.shape}')
+        elif opc == 'linha':
+            display(f'\nQuantidade Linhas: {df.shape[0]}')
+        elif opc == 'coluna':
+            nomes_colunas = df.columns.tolist()
+            display(f'Quantidade de Colunas: {df.shape[1]}')
+            display(f'Nomes das Colunas: {nomes_colunas}')
+        elif opc == 'info':
+            # Apenas chame df.info() diretamente
+            print("\nInfo:")
+            df.info()
+        elif opc == 'head':
+            # df.head() retorna um DataFrame, então imprima-o diretamente
+            print("\nHead:")
+            display(df.head())
+        elif opc == 'isnull':
+            # df.isnull().sum() retorna uma Series, então imprima-a diretamente
+            print('\nIsnull:')
+            display(df.isnull().sum())
+        elif opc == 'todos':
+            # Para 'todos', é melhor quebrar para não misturar print com retorno None
+            print(f"Tamanho (linhas, colunas):{df.shape}")
+            print("\nInfo:")
+            df.info()
+            print("\nHead:")
+            print(df.head())
+            print("\nIsnull:")
+            print(df.isnull().sum())
+        elif opc == 'config':
+            print('Informações sobre configuração detals_df:\nEstá função pode mostrar detalhes no campo opc:\ntamanho: Tamanho do DF.\nlinha: Quantidade de linhas no DF.' \
+            '\ncoluna: Quantidade de colunas e nomes das colunas no DF.\ninfo: Puxa informações do DF.\nhead: Puxa o head (cabeçalho) de 5 linhas do DF.\nisnull: Informa campos vazios/nulos agrupado por colunas.' \
+            '\ntodos: Puxa todas as informações. Obs: Menos linha e coluna.')
+        else:
+            print('Erro: Informe "opc" entre tamanho, linha, coluna, info, head, isnull ou todos')
+    except Exception as e:
+        print(f'Erro inesperado na função detals_df: {e}')
+        
+
+def describe_df(df,opc):
+    try:
+        if opc == 'normal':
+            display(df.describe())
+        elif opc == 'object':
+            display(df.describe(include='object'))
+        else:
+            print('Erro: Informe campo "opc" entre normal e object!')
+    except Exception as e:
+            print(f'Erro: Inesperado na função describe_df: {e}')
+
+def type_columns_df(df,opc):
+    try:
+        if opc == 'quantitativa':
+            variaveis_quantitativas = df.select_dtypes(include=['number']).columns.tolist()
+            print(f"Variáveis Quantitativas: {variaveis_quantitativas}")
+            return variaveis_quantitativas
+        elif opc == 'qualitativa':
+            variaveis_qualitativas = df.select_dtypes(include=["category","object"]).columns.tolist()
+            print(f"Variáveis Qualitativa: {variaveis_qualitativas}")
+            return variaveis_qualitativas
+        elif opc == 'todos':
+            variaveis_quantitativas = df.select_dtypes(include=['number']).columns.tolist()
+            print(f"Variáveis Quantitativas: {variaveis_quantitativas}")
+            variaveis_qualitativas = df.select_dtypes(include=["category","object"]).columns.tolist()
+            print(f"Variáveis Qualitativa: {variaveis_qualitativas}")
+            # Retorna ambas as listas
+            return variaveis_quantitativas, variaveis_qualitativas
+        else:
+            print('Erro: Escolha no campo "opc" entre "quantitativa", "qualitativa" ou "todos"')
+            return None # Retorna None explicitamente para indicar falha ou opção inválida
+    except Exception as e:
+            print(f'Erro: Inesperado na função tipy_columns_df: {e}')
+            return None 
+
+def renames_columns_df(df,dicionario,boolean):
+    try:
+        if boolean:
+            df.rename(columns=dicionario,inplace=boolean)
+            print('Coluna(s) informada(s) no dicionário foram renomeadas com sucesso!')
+            details_df(df,'head')
+        elif boolean == False:
+            df_final = df.rename(columns=dicionario)
+            print('Coluna(s) informada(s) no dicionário foram renomeadas com sucesso!')
+            details_df(df_final,'head')
+            return df_final
+        else:
+            print('Erro: Informe o tipo de Inplace True ou False, caso True passe variável para receber informação.')
+    except Exception as e:
+        print(f'Erro: Inesperado na função renames_columns_df: {e}')
+        return None 
+
+def renames_fields_df(df,coluna,dicionario):
+    try:
+        df[coluna] =  df[coluna].replace(dicionario)
+        print(df[coluna].value_counts(dropna=False))
+        return df
+    except Exception as e:
+        print(f'Erro: Inesperado na função renames_fields_df: {e}')
+        return None
+
+def value_counts_df(df,opc,coluna):
+    try:    
+        if opc == 'normal':
+            print(f'\n{df[coluna].value_counts(dropna=False)}')
+        elif opc == 'proporcao':
+            prop = df[coluna].value_counts(normalize=True).reset_index().rename(columns={"proportion":"Proporção"}).sort_values(by="Proporção", ascending=False)
+            print(f'\n{prop}')
+        elif opc == 'todos':
+            print(f'\n{df[coluna].value_counts(dropna=False)}')
+            print(f'\n{df[coluna].value_counts(normalize=True).reset_index().rename(columns={"proportion":"Proporção"}).sort_values(by="Proporção", ascending=False)}')
+        elif opc == 'config':
+            print('\nInformações sobre configuração value_counts_df:\nnormal: Retorna as categorias e suas quantidades de uma determina coluna.\nproporcao:  Retorna as categorias e suas proporção de uma determina coluna.\n' \
+            'todos: Retorna as categorias, suas quantidades e proporção.')
+        else:
+            print('\nErro: Informe a "opc" entre normal, proporcao, todos e config para mais detalhes.')
+    except Exception as e:
+            print(f'Erro: Inesperado na função value_counts_df: {e}')
+
+def str_upper_df(df,column):
+    try:
+        df[column] = df[column].str.upper()
+        print(f'\nAs categorias contidas na coluna {column} foram convertidas para maiúsculas!')
+    except Exception as e:
+        print(f'Erro: Inesperado na função str_upper_df: {e}')
+
+def drop_column_df(df,columns,boolean):
+    try:
+        if boolean:
+            df.drop(columns=columns, inplace=boolean)
+            print(f'Os campos {columns} foram excluídos com sucesso!')
+            details_df(df,'head')
+        elif boolean == False:
+            df_final = df.drop(columns=columns, inplace=boolean)
+            print(f'Os campos {columns} foram excluídos com sucesso!')
+            details_df(df_final,'head')
+            return df_final
+        else:
+            print('Erro: Informe o inplace True ou False, caso True passe variável para receber informação.')
+    except Exception as e:
+        print(f'Erro: Inesperado na função drop_column_df: {e}')
+
+
+def convert_type_df(df,opc,coluna,tipo=None):
+        try:
+            if opc == 'outro':
+                df[coluna] = df[coluna].astype(tipo)
+                print(f'A coluna {coluna}, foi alterada para {tipo} com sucesso!')
+                return df[coluna]
+            elif opc == 'datetime':
+                df[coluna]= pd.to_datetime(df[coluna], format='%d/%m/%Y')
+                print(f'A coluna {coluna}, foi alterada para datetime com sucesso!')
+                return df[coluna]
+            else:
+                print('Erro: Por favor escolha "opc" entre outros para definir tipos Ex: int ou datetime para conversão em datas.')
+        except Exception as e:
+            print(f'Erro: Inesperado na função convert_type_df: {e}')
+            if opc == 'datetime':
+                return df
+
+#======================================Melhorias Gemini===================================================
+def details_df(df, opc):
+    """
+    Exibe detalhes de um DataFrame com base nas opções fornecidas.
+
+    Args:
+        df (pandas.DataFrame): O DataFrame a ser analisado.
+        opc (str ou list): Uma string ou lista de strings especificando quais detalhes exibir.
+                           Opções válidas: 'tamanho', 'linha', 'coluna', 'info', 'head', 'isnull', 'config'.
+    """
+    if isinstance(opc, str):
+        opc = [opc]  # Converte a string em uma lista para uniformizar o tratamento
+
+    for item in opc:
+        try:
+            if item == 'tamanho':
+                print("\n--- Tamanho do DataFrame ---")
+                display(f'Tamanho (linhas, colunas): {df.shape}')
+            elif item == 'linha':
+                print("\n--- Quantidade de Linhas ---")
+                display(f'Quantidade Linhas: {df.shape[0]}')
+            elif item == 'coluna':
+                print("\n--- Informações de Colunas ---")
+                nomes_colunas = df.columns.tolist()
+                display(f'Quantidade de Colunas: {df.shape[1]}')
+                display(f'Nomes das Colunas: {nomes_colunas}')
+            elif item == 'info':
+                print("\n--- Informações Gerais (df.info()) ---")
+                df.info()
+            elif item == 'head':
+                print("\n--- Primeiras 5 Linhas (df.head()) ---")
+                display(df.head())
+            elif item == 'isnull':
+                print("\n--- Valores Nulos por Coluna (df.isnull().sum()) ---")
+                display(df.isnull().sum())
+            elif item == 'todos':
+                display(f"Tamanho (linhas, colunas): {df.shape}")
+                print("\n--- Informações de Colunas ---")
+                nomes_colunas = df.columns.tolist()
+                display(f'Quantidade de Colunas: {df.shape[1]}')
+                display(f'Nomes das Colunas: {nomes_colunas}')
+                print("\n--- Informações Gerais (df.info()) ---")
+                df.info()
+                print("\n--- Primeiras 5 Linhas (df.head()) ---")
+                display(df.head())
+                print("\n--- Valores Nulos por Coluna (df.isnull().sum()) ---")
+                display(df.isnull().sum())
+            elif item == 'config':
+                print('\n--- Configurações de Uso da Função details_df ---')
+                print('Esta função pode mostrar detalhes no campo "opc".')
+                print('Você pode passar uma string ou uma lista de strings com as seguintes opções:')
+                print('  - "tamanho": Tamanho (linhas, colunas) do DF.')
+                print('  - "linha": Quantidade de linhas no DF.')
+                print('  - "coluna": Quantidade de colunas e nomes das colunas no DF.')
+                print('  - "info": Informações detalhadas do DF (df.info()).')
+                print('  - "head": As 5 primeiras linhas do DF (df.head()).')
+                print('  - "isnull": Contagem de valores nulos por coluna (df.isnull().sum()).')
+                print('  - "config": Exibe esta mensagem de configurações.')
+            else:
+                print(f'\n--- Opção Inválida: "{item}" ---')
+                print('Opções válidas: "tamanho", "linha", "coluna", "info", "head", "isnull", "config".')
+        except Exception as e:
+            print(f'\n--- Erro ao processar "{item}": {e} ---')
+
+def merge_df(df1, df2, merge_params, columns_to_drop=None):
+    """
+    Realiza um merge entre dois DataFrames, permite a remoção de colunas
+    e exibe o cabeçalho do DataFrame resultante.
+
+    Args:
+        df1 (pd.DataFrame): O primeiro DataFrame (left).
+        df2 (pd.DataFrame): O segundo DataFrame (right).
+        merge_params (list): Uma lista contendo [left_on, right_on, how].
+                             - left_on (str ou list): Coluna(s) para unir em df1.
+                             - right_on (str ou list): Coluna(s) para unir em df2.
+                             - how (str): Tipo de merge ('left', 'right', 'inner', 'outer').
+        columns_to_drop (list, optional): Uma lista de nomes de colunas a serem removidas
+                                           do DataFrame resultante. Padrão para None.
+
+    Returns:
+        pd.DataFrame: O DataFrame resultante da operação de merge.
+    """
+    if len(merge_params) != 3:
+        raise ValueError("merge_params deve conter [left_on, right_on, how].")
+
+    left_on, right_on, how = merge_params
+
+    print(f"Realizando merge '{how}' entre DataFrames...")
+    print(f"Chave(s) no primeiro DF (left_on): {left_on}")
+    print(f"Chave(s) no segundo DF (right_on): {right_on}")
+
+    try:
+        df_merged = pd.merge(df1, df2, left_on=left_on, right_on=right_on, how=how)
+        print("\nMerge concluído com sucesso!")
+        print(f"Dimensões do DataFrame resultante: {df_merged.shape}")
+
+        if columns_to_drop:
+            print(f"\nRemovendo as seguintes colunas: {columns_to_drop}")
+            # Verifica se as colunas a serem dropadas existem no DataFrame
+            existing_columns = [col for col in columns_to_drop if col in df_merged.columns]
+            non_existing_columns = [col for col in columns_to_drop if col not in df_merged.columns]
+
+            if non_existing_columns:
+                print(f"Atenção: As colunas {non_existing_columns} não foram encontradas no DataFrame e não serão removidas.")
+
+            if existing_columns:
+                df_merged = df_merged.drop(columns=existing_columns)
+                print("Colunas removidas com sucesso!")
+                print(f"Novas dimensões do DataFrame: {df_merged.shape}")
+            else:
+                print("Nenhuma das colunas especificadas para remoção foi encontrada no DataFrame.")
+
+        print("\n--- Head do DataFrame Resultante ---")
+        display(df_merged.head())
+
+        return df_merged
+
+    except Exception as e:
+        print(f"Erro ao realizar a operação de merge: {e}")
+        return None

@@ -1,0 +1,231 @@
+Faturamento Bruto = A quantidade de produtos * o preço unitário por produto
+
+Receita Bruta (É o valor Total dos produtos - menos o desconto de venda)
+
+Desconto (Pode ser calculado do Faturamento Bruto - a Receita Bruta)
+
+Receita líquida (É o valor da Receita Bruta - Impostos(tributos))
+
+Lucro (Margem)(É a receita líquida menos - os custos(De pessoal,matéria prima, ambiente de produção, estoque etc))
+==========================================
+00.Medidas Diversas: 
+
+Contagem de Linhas Fato_vendas =
+	COUNTROWS(fato_vendas)
+
+Quantidade Produto Vendida = SUM(fato_vendas[Qtde])
+
+Média Qtde Vendida =
+	AVERAGE(fato_vendas[Qtde])
+
+Qtde Máxima Vendida =
+	MAX(fato_vendas[Qtde])
+
+Qtde Mínima Vendida =
+	MIN(fato_vendas[Qtde])
+
+==================================================
+01. Performance
+Faturamento Bruto =
+	SUMX(fato_vendas, fato_vendas[Qtde] * RELATED(dim_produto[Preco_Unitario]))
+
+Receita Bruta com Desconto = SUM(fato_vendas[Valor Total])
+
+Desconto = [Faturamento Bruto] - [Receita Bruta]
+
+Custos =
+	SUMX(fato_vendas, fato_vendas[Qtde] * RELATED(dim_produto[Custo])
+
+Tributos = 
+	SUMX(fato_vendas, fato_vendas[Qtde] * RELATED(dim_produto[Tributos])
+
+Receita Líquida = 
+	[Receita Bruta] - [Tributos]
+
+Margem = [Receita Líquida] - [Custos]
+
+% Margem =
+	DIVIDE([Margem], [Receita Líquida]), 0)
+==========================================================
+02.Calculate
+
+ALL - Puxa tudo da tabela e não respeita filtro.
+
+Faturamento Bruto - ALL =
+	CALCULATE(
+		[Faturamento Bruto],
+		ALL(dim_categoria[Categoria])
+ 
+
+% Fat Bruto Total - All = 
+	DIVIDE([Faturamento Bruto], [Faturamento Bruto - ALL],0)
+
+ALLSELECTED - Puxa tudo da tabela e respeita a utilização de filtro.
+
+Faturamento Bruto - ALLSELECTED = 
+	CALCULATE(
+		[Faturamento Bruto],
+		ALLSELECTED(dim_categoria[Categoria])
+
+% Fat Bruto Total - ALLSELECTED =
+	DIVIDE([Faturamento Bruto], [Faturamento Bruto - ALLSELECTED],0)
+
+FILTER:
+Faturamento Bruto - Filter =
+	CALCULATE(
+	[Faturamento Bruto], 
+		FILTER(
+			VALUES(dim_marca),
+			dim_marca[Marca] = "Samsung"))
+
+Faturamento Bruto - Samsung = 
+ CALCULATE(
+    [Faturamento Bruto],
+    // dim_marca[Marca] = "Samsung"
+    //dim_marca[Marca] IN {"Samsung", "Apple"}
+    //dim_marca[Marca] = "Samsung" || dim_marca[Marca] = "Apple"
+    dim_marca[Marca] = "Samsung",
+    dim_categoria[Categoria] = "Celulares"
+    )
+    //O calculate vai calcular o somatório do que foi pedido na expressão  
+
+Faturamento Bruto Acc = 
+ CALCULATE(
+    [Faturamento Bruto],
+    FILTER(
+        ALLSELECTED(dim_calendario),
+        dim_calendario[Data] <= MAX(fato_vendas[Data_Venda])
+ ))
+
+//Pegue o Faturamento da tabela [Faturamento Bruto] e filtre por toda tabela [dim_calendario], 
+equanto a nossa data (dim_calendario[Data]) <= a última data de venda MAX(fato_venda[Data_venda]), então acumule.
+
+=======================================================
+03.Inteligência de Tempo
+
+Faturamento Bruto LY =
+	CALCULATE(
+		[Faturamento Bruto],
+		SAMEPERIODLASTYEAR(dim_calendario[Data])
+
+Faturamento Bruto LM =
+	CALCULATE(
+		[Faturamento Bruto],
+		DATEADD(
+			dim_calendario[Data],
+			-1,
+			MONTH)
+% YoY Faturamento Bruto =
+	DIVIDE(
+	[Faturamento Bruto] - [Faturamento Bruto LY],
+	[Faturamento Bruto LY],
+	0)
+
+===============================================================
+04.Condicionais
+
+IF-Apple e Celulares
+    IF(
+        SELECTEDVALUE(dim_marca[Marca]) = "Apple" && 
+	SELECTEDVALUE(dim_categoria[Categoria]) = "Celulares", TRUE(),FALSE())
+
+IF-Apple e Celulares ou Arno e Games = 
+    IF(
+        SELECTEDVALUE(dim_marca[Marca]) = "Apple" && SELECTEDVALUE(dim_categoria[Categoria]) = "Celulares" ||
+        SELECTEDVALUE(dim_marca[Marca]) = "Arno" && SELECTEDVALUE(dim_categoria[Categoria]) = "Games",
+        "Verdadeiro",
+        BLANK()
+    )
+
+IF-Categoria Apple = 
+	IF(
+    	SELECTEDVALUE(dim_marca[Marca]) = "Apple", TRUE(), FALSE())
+SWITCH:
+
+Switch - Receita Bruta Apple ou LG Televisores = 
+    SWITCH(
+        TRUE(),
+        SELECTEDVALUE(dim_marca[Marca]) = "Apple", [Receita Bruta],
+        SELECTEDVALUE(dim_marca[Marca]) = "LG" && SELECTEDVALUE(dim_categoria[Categoria]) = "Televisores", [Receita Bruta],
+        BLANK())
+====================================================================================
+05.ISINSCOPE(Parametro1,Parametro2) (Retorna True ou False, no primeiro parametro. Se for true, ele executa o que se pede depois):
+
+% sobre o subtotal Receita Bruta = 
+    var TotalProduto = CALCULATE([Receita Bruta],ALLSELECTED(dim_produto[Descricao_Produto]))
+    var TotalSubcategoria = CALCULATE([Receita Bruta], ALLSELECTED(dim_subcategoria[Subcategoria]))
+    var TotalCategoria = CALCULATE([Receita Bruta],ALLSELECTED(dim_categoria[Categoria]))
+RETURN
+SWITCH(
+    TRUE(),
+    ISINSCOPE(dim_produto[Descricao_Produto]),DIVIDE([Receita Bruta],TotalProduto,0),
+    ISINSCOPE(dim_subcategoria[Subcategoria]),DIVIDE([Receita Bruta],TotalSubcategoria,0),
+    ISINSCOPE(dim_categoria[Categoria]), DIVIDE([Receita Bruta],TotalCategoria,0)
+    ,BLANK())
+=========================================================================================
+Lembre de criar a Tabela com duas colunas ID e referência de pesquisa (Ex Produto)
+Coloque essa tabela em um Filtro de pesquisa para ser chamada por as demais Funções DAX
+
+Medida DINAMICA:
+
+Medida Dinamina - Valor = 
+VAR MedidaSelecionada = SELECTEDVALUE(aux_Medidas[Medida])
+RETURN       
+    SWITCH(
+            TRUE(),
+            MedidaSelecionada = "Quantidade", [Quantidade],
+            MedidaSelecionada = "Faturamento Bruto", [Faturamento Bruto],
+            MedidaSelecionada = "Receita Bruta", [Receita Bruta],
+            MedidaSelecionada = "Tributos", [Tributos],
+            MedidaSelecionada = "Receita Líquida", [Receita Líquida],
+            MedidaSelecionada = "Custo", [Custos],
+            MedidaSelecionada = "Margem", [Margem],
+            BLANK()
+            )
+
+Medida Dinamina - Valor LY = 
+VAR MedidaSelecionada = SELECTEDVALUE(aux_Medidas[Medida])
+RETURN       
+    SWITCH(
+            TRUE(),
+            MedidaSelecionada = "Quantidade", [Quantidade LY],
+            MedidaSelecionada = "Faturamento Bruto", [Faturamento Bruto LY],
+            MedidaSelecionada = "Receita Bruta", [Receita Bruta LY],
+            MedidaSelecionada = "Tributos", [Tributos LY],
+            MedidaSelecionada = "Receita Líquida", [Receita Líquida LY],
+            MedidaSelecionada = "Custo", [Custo LY],
+            MedidaSelecionada = "Margem", [Margem LY],
+            BLANK()
+            )
+
+% Diferença YoY = 
+    DIVIDE(
+        [Medida Dinamina - Valor]-[Medida Dinamina - Valor LY],[Medida Dinamina - Valor LY], 0)
+
+
+Medida Dinamica - Share = 
+    var TotalProduto = CALCULATE([Medida Dinamina - Valor], ALLSELECTED(dim_produto[Descricao_Produto]))
+    var TotalSubcategoria = CALCULATE([Medida Dinamina - Valor], ALLSELECTED(dim_subcategoria[Subcategoria]))
+    var TotalCategoria =  CALCULATE([Medida Dinamina - Valor], ALLSELECTED(dim_categoria[Categoria]))
+RETURN
+SWITCH(
+    TRUE(),
+        ISINSCOPE(dim_produto[Descricao_Produto]), DIVIDE([Medida Dinamina - Valor], TotalProduto,0),
+        ISINSCOPE(dim_subcategoria[Subcategoria]), DIVIDE([Medida Dinamina - Valor],TotalSubcategoria, 0 ),
+        DIVIDE([Medida Dinamina - Valor],TotalCategoria,0)
+     )
+====================================================================================
+O IF é só para tirar o número total.
+Rank Medida Dinâmica = 
+IF (ISINSCOPE(dim_marca[Marca]),
+RANKX(ALLSELECTED(dim_marca[Marca]),[Medida Dinamina - Valor],,DESC),
+BLANK())
+==============================================================
+TOPN Marca = 
+CALCULATE([Medida Dinamina - Valor],
+KEEPFILTERS(
+    TOPN(
+        3,
+        ALLSELECTED(dim_marca[Marca]),
+    [Medida Dinamina - Valor])
+    ))

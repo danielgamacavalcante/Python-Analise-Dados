@@ -1,2 +1,2 @@
 Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
-.\venvda\Scripts\activate
+.\nome_pasta_venv_criada\Scripts\activate

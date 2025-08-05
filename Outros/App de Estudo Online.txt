@@ -1,0 +1,5 @@
+https://app.powerbi.com/view?r=eyJrIjoiNDM5MzE5OGItZWE3Ni00MmRlLWE0MzctZmUxZmRiM2VhNWM5IiwidCI6IjkxMzFkOWJhLTMwM2UtNDQ2Zi1iMDllLTVkZmNiMGUyNDFmOCJ9
+
+https://app.powerbi.com/view?r=eyJrIjoiMjExNWViYWYtNTRjMy00YTMyLWJlMzctODQzMTM4YjRhYmU4IiwidCI6IjkxMzFkOWJhLTMwM2UtNDQ2Zi1iMDllLTVkZmNiMGUyNDFmOCJ9
+
+https://huggingface.co/spaces/DanielGama/Dashboard-Vendas-DW

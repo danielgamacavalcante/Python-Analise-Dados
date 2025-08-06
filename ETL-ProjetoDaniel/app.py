@@ -3,6 +3,7 @@ import gradio as gr
 from gradio.components import Markdown
 import google.generativeai as genai  #utilizado para IA, API Gemini
 from dotenv import load_dotenv #utilizado para ler a chave do API Gemini
+import re
 import pandas as pd
 import psycopg2
 import matplotlib.pyplot as plt
@@ -80,77 +81,71 @@ Você é um assistente de IA especializado em PostgreSQL. Sua única tarefa é t
 
 Use o esquema a seguir:
 
-Tabela DW_FINANCEIRO.FATO:
-  - id_produto (INTEGER)
-  - id_cliente (INTEGER)
-  - id_canal (INTEGER)
-  - data_venda (DATE)
-  - valor_total (NUMERIC)
-  - qtde (INTEGER)
-  - data_devolucao (DATE)
+Tabelas:
+- DW_FINANCEIRO.FATO (id, data_venda, data_entrega, id_canal, id_cliente, id_produto, qtde, valor_total)
+- DW_FINANCEIRO.MARCA (id, marca)
+- DW_FINANCEIRO.CATEGORIA (id, categoria)
+- DW_FINANCEIRO.CANAL (id, descricao_canal)
+- DW_FINANCEIRO.CLIENTES (id, nome, sobrenome, data_nascimento, estado_civil, genero, educacao, id_cidade)
+- DW_FINANCEIRO.CIDADE (id, cidade, uf)
+- DW_FINANCEIRO.PRODUTO (id, descricao_produto, id_subcategoria, id_marca, preco_unitario, tributos, custo)
+- DW_FINANCEIRO.SUBCATEGORIA (id, subcategoria, id_categoria)
 
-Tabela DW_FINANCEIRO.CLIENTES:
-  - id (INTEGER)
-  - id_cidade (INTEGER)
-  - cliente (VARCHAR)
-
-Tabela DW_FINANCEIRO.CIDADE:
-  - id (INTEGER)
-  - cidade (VARCHAR)
-
-Tabela DW_FINANCEIRO.PRODUTO:
-  - id (INTEGER)
-  - id_subcategoria (INTEGER)
-  - produto (VARCHAR)
-
-Tabela DW_FINANCEIRO.SUBCATEGORIA:
-  - id (INTEGER)
-  - id_categoria (INTEGER)
-  - subcategoria (VARCHAR)
-
-Tabela DW_FINANCEIRO.CATEGORIA:
-  - id (INTEGER)
-  - categoria (VARCHAR)
+Relacionamentos:
+- DW_FINANCEIRO.FATO.id_canal -> DW_FINANCEIRO.CANAL.id
+- DW_FINANCEIRO.FATO.id_cliente -> DW_FINANCEIRO.CLIENTES.id
+- DW_FINANCEIRO.FATO.id_produto -> DW_FINANCEIRO.PRODUTO.id
+- DW_FINANCEIRO.CLIENTES.id_cidade -> DW_FINANCEIRO.CIDADE.id
+- DW_FINANCEIRO.PRODUTO.id_marca -> DW_FINANCEIRO.MARCA.id
+- DW_FINANCEIRO.PRODUTO.id_subcategoria -> DW_FINANCEIRO.SUBCATEGORIA.id
+- DW_FINANCEIRO.SUBCATEGORIA.id_categoria -> DW_FINANCEIRO.CATEGORIA.id
 
 As tabelas de fato e dimensão podem ser unidas usando as colunas de ID correspondentes.
 """
 # Carrega as variáveis de ambiente do arquivo .env
 load_dotenv()
 # Obtém a chave de API do ambiente
-api_key = os.getenv("API_KEY")
+api_key = os.getenv("GOOGLE_API_KEY")
+
+if not api_key:
+    raise ValueError("Chave de API não encontrada. Verifique o arquivo .env.")
 
 def execute_ai_query(pergunta_usuario):
-    
-    # Configure a API Gemini com a sua chave
     genai.configure(api_key=api_key)
     model = genai.GenerativeModel('gemini-1.5-flash')
 
-    # A IA recebe o prompt de sistema completo e a pergunta do usuário
     prompt_completo = f"{SCHEMA_DO_SEU_DATA_WAREHOUSE}\n\nTraduza a seguinte pergunta para uma consulta SQL:\n'{pergunta_usuario}'"
-
+    sql_query = ""
+    
     try:
-        # A IA gera a consulta SQL
         response = model.generate_content(prompt_completo)
         sql_query = response.text.strip()
         
-        # Conecta ao banco de dados e executa a consulta
-        conn = get_db_connection()
+        sql_query_limpa = re.sub(r"```sql\s*|```", "", sql_query, flags=re.IGNORECASE).strip()
         
-        # VALIDAÇÃO DE SEGURANÇA: ÚLTIMA LINHA DE DEFESA
-        if sql_query.lower().startswith("select"):
+        if sql_query_limpa.lower().startswith("select"):
+            conn = get_db_connection()
             cursor = conn.cursor()
-            cursor.execute(sql_query)
+            cursor.execute(sql_query_limpa)
             dados = cursor.fetchall()
             colunas = [desc[0] for desc in cursor.description]
             df = pd.DataFrame(dados, columns=colunas)
+            
+            # --- CORREÇÃO ADICIONADA AQUI ---
+            # Verifica se a coluna 'valor_total_vendas' existe no DataFrame
+            if 'valor_total_vendas' in df.columns:
+                # Aplica formatação de número com duas casas decimais e separador de milhar
+                df['valor_total_vendas'] = df['valor_total_vendas'].apply(lambda x: f'{x:,.2f}')
+            # -------------------------------
+            
             return df.to_markdown(index=False)
         else:
-            return "Comando SQL inválido ou não permitido. Apenas consultas SELECT são aceitas."
+            return f"Comando SQL inválido. A consulta gerada foi: `{sql_query_limpa}`. Apenas consultas SELECT são aceitas."
             
     except Exception as e:
         return f"Ocorreu um erro: {e}"
     finally:
-        if conn:
+        if 'conn' in locals() and conn:
             conn.close()
 #================================================ Criação de Gráficos ====================================================            
 def get_categorias_disponiveis():
@@ -926,7 +921,29 @@ Este dashboard é um estudo completo que une o backend de um Data Warehouse com 
                     categoria_por_faturamento_bruto = gr.Plot()
         with gr.TabItem("Assistente de Dados"):
             gr.Markdown("### Assitente IA para Consultas SQL")
-            gr.Markdown("Faça perguntas sobre os dados em linguagem natural. Exemplo: 'Quais foram as 5 cidades com mais vendas em 2024?'")
+            gr.Markdown("""Faça perguntas sobre os dados em linguagem natural. Exemplo: 'Quais foram as 5 cidades com mais vendas em 2024?'
+                        
+                        Esse é o esquema contido no Data Warehouse:
+
+                        Tabelas:
+                        - DW_FINANCEIRO.FATO (id, data_venda, data_entrega, id_canal, id_cliente, id_produto, qtde, valor_total)
+                        - DW_FINANCEIRO.MARCA (id, marca)
+                        - DW_FINANCEIRO.CATEGORIA (id, categoria)
+                        - DW_FINANCEIRO.CANAL (id, descricao_canal)
+                        - DW_FINANCEIRO.CLIENTES (id, nome, sobrenome, data_nascimento, estado_civil, genero, educacao, id_cidade)
+                        - DW_FINANCEIRO.CIDADE (id, cidade, uf)
+                        - DW_FINANCEIRO.PRODUTO (id, descricao_produto, id_subcategoria, id_marca, preco_unitario, tributos, custo)
+                        - DW_FINANCEIRO.SUBCATEGORIA (id, subcategoria, id_categoria)
+
+                        Relacionamentos:
+                        - DW_FINANCEIRO.FATO.id_canal -> DW_FINANCEIRO.CANAL.id
+                        - DW_FINANCEIRO.FATO.id_cliente -> DW_FINANCEIRO.CLIENTES.id
+                        - DW_FINANCEIRO.FATO.id_produto -> DW_FINANCEIRO.PRODUTO.id
+                        - DW_FINANCEIRO.CLIENTES.id_cidade -> DW_FINANCEIRO.CIDADE.id
+                        - DW_FINANCEIRO.PRODUTO.id_marca -> DW_FINANCEIRO.MARCA.id
+                        - DW_FINANCEIRO.PRODUTO.id_subcategoria -> DW_FINANCEIRO.SUBCATEGORIA.id
+                        - DW_FINANCEIRO.SUBCATEGORIA.id_categoria -> DW_FINANCEIRO.CATEGORIA.id
+                                                """)
             
             pergunta_box = gr.Textbox(label="Faça uma Pergunta:")
             

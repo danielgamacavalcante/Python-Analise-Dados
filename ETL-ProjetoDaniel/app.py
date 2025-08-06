@@ -1,5 +1,8 @@
 # app.py
 import gradio as gr
+from gradio.components import Markdown
+import google.generativeai as genai  #utilizado para IA, API Gemini
+from dotenv import load_dotenv #utilizado para ler a chave do API Gemini
 import pandas as pd
 import psycopg2
 import matplotlib.pyplot as plt
@@ -67,6 +70,88 @@ def handle_select_all_categories(select_all, all_choices,current_categories):
         return all_choices
     else:
         return current_categories
+#================================================ Função da IA Gemini ====================================================
+SCHEMA_DO_SEU_DATA_WAREHOUSE = """
+Você é um assistente de IA especializado em PostgreSQL. Sua única tarefa é traduzir perguntas em português para consultas SQL.
+
+**Restrição de Segurança:**
+- GERE APENAS CONSULTAS QUE COMECEM COM `SELECT`.
+- NENHUMA OUTRA INSTRUÇÃO SQL (como INSERT, UPDATE, DELETE, DROP, ALTER, etc.) É PERMITIDA.
+
+Use o esquema a seguir:
+
+Tabela DW_FINANCEIRO.FATO:
+  - id_produto (INTEGER)
+  - id_cliente (INTEGER)
+  - id_canal (INTEGER)
+  - data_venda (DATE)
+  - valor_total (NUMERIC)
+  - qtde (INTEGER)
+  - data_devolucao (DATE)
+
+Tabela DW_FINANCEIRO.CLIENTES:
+  - id (INTEGER)
+  - id_cidade (INTEGER)
+  - cliente (VARCHAR)
+
+Tabela DW_FINANCEIRO.CIDADE:
+  - id (INTEGER)
+  - cidade (VARCHAR)
+
+Tabela DW_FINANCEIRO.PRODUTO:
+  - id (INTEGER)
+  - id_subcategoria (INTEGER)
+  - produto (VARCHAR)
+
+Tabela DW_FINANCEIRO.SUBCATEGORIA:
+  - id (INTEGER)
+  - id_categoria (INTEGER)
+  - subcategoria (VARCHAR)
+
+Tabela DW_FINANCEIRO.CATEGORIA:
+  - id (INTEGER)
+  - categoria (VARCHAR)
+
+As tabelas de fato e dimensão podem ser unidas usando as colunas de ID correspondentes.
+"""
+# Carrega as variáveis de ambiente do arquivo .env
+load_dotenv()
+# Obtém a chave de API do ambiente
+api_key = os.getenv("API_KEY")
+
+def execute_ai_query(pergunta_usuario):
+    
+    # Configure a API Gemini com a sua chave
+    genai.configure(api_key=api_key)
+    model = genai.GenerativeModel('gemini-1.5-flash')
+
+    # A IA recebe o prompt de sistema completo e a pergunta do usuário
+    prompt_completo = f"{SCHEMA_DO_SEU_DATA_WAREHOUSE}\n\nTraduza a seguinte pergunta para uma consulta SQL:\n'{pergunta_usuario}'"
+
+    try:
+        # A IA gera a consulta SQL
+        response = model.generate_content(prompt_completo)
+        sql_query = response.text.strip()
+        
+        # Conecta ao banco de dados e executa a consulta
+        conn = get_db_connection()
+        
+        # VALIDAÇÃO DE SEGURANÇA: ÚLTIMA LINHA DE DEFESA
+        if sql_query.lower().startswith("select"):
+            cursor = conn.cursor()
+            cursor.execute(sql_query)
+            dados = cursor.fetchall()
+            colunas = [desc[0] for desc in cursor.description]
+            df = pd.DataFrame(dados, columns=colunas)
+            return df.to_markdown(index=False)
+        else:
+            return "Comando SQL inválido ou não permitido. Apenas consultas SELECT são aceitas."
+            
+    except Exception as e:
+        return f"Ocorreu um erro: {e}"
+    finally:
+        if conn:
+            conn.close()
 #================================================ Criação de Gráficos ====================================================            
 def get_categorias_disponiveis():
     conn = get_db_connection()
@@ -839,6 +924,29 @@ Este dashboard é um estudo completo que une o backend de um Data Warehouse com 
                 with gr.Column():
                     gr.Markdown("### Categoria por Faturamento Bruto")
                     categoria_por_faturamento_bruto = gr.Plot()
+        with gr.TabItem("Assistente de Dados"):
+            gr.Markdown("### Assitente IA para Consultas SQL")
+            gr.Markdown("Faça perguntas sobre os dados em linguagem natural. Exemplo: 'Quais foram as 5 cidades com mais vendas em 2024?'")
+            
+            pergunta_box = gr.Textbox(label="Faça uma Pergunta:")
+            
+            with gr.Row():
+                executar_btn = gr.Button("Executar Consulta")
+                limpar_btn = gr.Button("Limpar")
+                
+            resultado_box = gr.Textbox(label="Resultado da Consulta:")
+            
+            executar_btn.click(
+                fn=execute_ai_query,
+                inputs=pergunta_box,
+                outputs=resultado_box
+            )
+            
+            limpar_btn.click(
+                fn=lambda: "",
+                inputs=None,
+                outputs=resultado_box
+            )
 
     # Saídas para a aba de Análise Geral
     all_outputs = [

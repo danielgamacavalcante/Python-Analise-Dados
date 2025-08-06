@@ -56,7 +56,41 @@ def get_anos_disponiveis():
     finally:
         if conn:
             conn.close()
-
+            
+def handle_select_all_categories(select_all, all_choices,current_categories):
+    """
+    Função de callback para o checkbox "Selecionar Tudo".
+    Se o checkbox for True, retorna todas as categorias.
+    Se for False, retorna apenas o primeiro item da lista.
+    """
+    if select_all:
+        return all_choices
+    else:
+        return current_categories
+#================================================ Criação de Gráficos ====================================================            
+def get_categorias_disponiveis():
+    conn = get_db_connection()
+    if conn is None:
+        return []
+    try:
+        cursor = conn.cursor()
+        query = """
+         SELECT DISTINCT cat.categoria
+        FROM DW_FINANCEIRO.FATO AS fato
+        JOIN DW_FINANCEIRO.PRODUTO AS prod ON fato.id_produto = prod.id
+        JOIN DW_FINANCEIRO.SUBCATEGORIA AS sub ON prod.id_subcategoria = sub.id
+        JOIN DW_FINANCEIRO.CATEGORIA AS cat ON sub.id_categoria = cat.id
+        ORDER BY cat.categoria;
+        """
+        cursor.execute(query)
+        categorias = [cat[0] for cat in cursor.fetchall()]
+        return categorias
+    except Exception as e:
+        print(f"Erro ao obter categorias disponíveis: {e}")
+        return []
+    finally:
+        if conn:
+            conn.close()
 # --- 2. Funções para Gerar Gráficos (mantidas as mesmas) ---
 
 
@@ -628,13 +662,30 @@ def gerar_grafico_vendas_por_cidade(ano_selecionado):
         if conn:
             conn.close()
             
-def gerar_grafico_faturamento_por_categoria(ano_selecionado):
+def gerar_grafico_faturamento_por_categoria(ano_selecionado, categorias_selecionadas):
+    # Tratamento para caso o usuário não selecione nenhuma categoria
+    if not categorias_selecionadas:
+        fig = go.Figure()
+        fig.add_annotation(
+            text="Selecione uma ou mais categorias para a análise.",
+            xref="paper", yref="paper", showarrow=False, font=dict(size=16)
+        )
+        fig.update_layout(title='Selecione Categorias', xaxis_visible=False, yaxis_visible=False, height=500)
+        return fig
+    
+    categorias_str = ", ".join([f"'{cat}'" for cat in categorias_selecionadas])
+    
     conn = get_db_connection()
     if conn is None:
-        fig, ax = plt.subplots(figsize=(12, 6))
-        ax.text(0.5, 0.5, "Erro ao conectar ao banco de dados.", ha='center', va='center', fontsize=12)
-        ax.axis('off')
+        # Erro de conexão com Plotly
+        fig = go.Figure()
+        fig.add_annotation(
+            text="Erro ao conectar ao banco de dados.",
+            xref="paper", yref="paper", showarrow=False, font=dict(size=16)
+        )
+        fig.update_layout(title='Erro', xaxis_visible=False, yaxis_visible=False, height=500)
         return fig
+        
     try:
         cursor = conn.cursor()
         query = f"""
@@ -651,6 +702,7 @@ def gerar_grafico_faturamento_por_categoria(ano_selecionado):
             DW_FINANCEIRO.CATEGORIA AS cat ON sub.id_categoria = cat.id
         WHERE
             EXTRACT(YEAR FROM fato.data_venda) = {ano_selecionado}
+            AND cat.categoria IN ({categorias_str})
         GROUP BY
             cat.categoria
         ORDER BY
@@ -659,59 +711,74 @@ def gerar_grafico_faturamento_por_categoria(ano_selecionado):
         cursor.execute(query)
         dados = cursor.fetchall()
         df_categorias = pd.DataFrame(dados, columns=['categoria', 'faturamento_bruto'])
+        
         if df_categorias.empty:
-            fig, ax = plt.subplots(figsize=(12, 6))
-            ax.text(0.5, 0.5, f"Nenhum dado de categoria por faturamento bruto foi encontrado para o ano {ano_selecionado}.", ha='center', va='center', fontsize=12)
-            ax.axis('off')
+            fig = go.Figure()
+            fig.add_annotation(
+                text=f"Nenhum dado de categoria por faturamento bruto foi encontrado para o ano {ano_selecionado}.",
+                xref="paper", yref="paper", showarrow=False, font=dict(size=12)
+            )
+            fig.update_layout(title='Dados Não Encontrados', xaxis_visible=False, yaxis_visible=False, height=500)
             return fig
+            
         fig = px.bar(
             df_categorias,
             x='categoria',
             y='faturamento_bruto',
-            title=f'Categorias por Faturamento Bruto no ano de {ano_selecionado}',
+            title=f'Faturamento Bruto por Categoria no ano de {ano_selecionado}',
             labels={'categoria': 'Categoria', 'faturamento_bruto': 'Faturamento Bruto'},
-            color_discrete_sequence=["#1faab4"] # Define a cor das barras
+            color_discrete_sequence=["#1faab4"]
         )
         
-        # --- NOVO CÓDIGO: Formata o texto das barras (negrito, cor, posição) ---
         fig.update_traces(
-            textposition='outside', # Posição do texto: pode ser 'inside' ou 'outside'
-            textfont_color='#222',  # Cor do texto
-            textfont_weight='bold'  # Texto em negrito
+            textposition='outside',
+            textfont_color='#222',
+            textfont_weight='bold'
         )
         
         fig.update_layout(
-            font=dict(size=12, color='#333'), # Escurece o texto geral e do tooltip
+            font=dict(size=12, color='#333'),
             title=dict(font=dict(size=16)),
             xaxis=dict(
                 title_font=dict(size=14, color='#333', weight='bold'),
-                tickfont=dict(color='#222', weight='bold')  # Escurece os rótulos do eixo X (categorias)
+                tickfont=dict(color='#222', weight='bold')
             ),
             yaxis=dict(
                 title_font=dict(size=14, color='#333', weight='bold'),
-                tickfont=dict(color='#222')  # Escurece os rótulos do eixo Y (valores)
-            )
+                tickfont=dict(color='#222')
+            ),
+            height=500
         )
+        
         return fig
+    
     except psycopg2.Error as e:
         print(f"Erro ao executar a consulta SQL: {e}")
-        fig, ax = plt.subplots(figsize=(12, 6))
-        ax.text(0.5, 0.5, f"Erro ao consultar dados: {e}", ha='center', va='center', fontsize=12)
-        ax.axis('off')
+        # Erro de consulta com Plotly
+        fig = go.Figure()
+        fig.add_annotation(
+            text=f"Erro ao consultar dados: {e}",
+            xref="paper", yref="paper", showarrow=False, font=dict(size=16)
+        )
+        fig.update_layout(title='Erro', xaxis_visible=False, yaxis_visible=False, height=500)
         return fig
+        
     finally:
         if conn:
             conn.close()
             
 # --- 3. Interface Gradio ---
-def update_all_plots(ano_selecionado):
+def update_all_plots(ano_selecionado,categorias_selecionadas):
     return (
         gerar_grafico_vendas_por_mes_ano(ano_selecionado),
         gerar_grafico_vendas_por_canal(ano_selecionado),
         gerar_grafico_vendas_por_categoria(ano_selecionado),
         gerar_grafico_vendas_por_cidade(ano_selecionado),
-        gerar_grafico_faturamento_por_categoria(ano_selecionado)
+        gerar_grafico_faturamento_por_categoria(ano_selecionado,categorias_selecionadas)
     )
+
+def update_categoria_plot(ano_selecionado, categorias_selecionadas):
+    return gerar_grafico_faturamento_por_categoria(ano_selecionado, categorias_selecionadas)
 
 with gr.Blocks(title="Dashboard de Vendas DW Financeiro") as demo:
     gr.Markdown("# Dashboard de Vendas DW Financeiro")
@@ -731,7 +798,8 @@ Este dashboard é um estudo completo que une o backend de um Data Warehouse com 
 """)
     anos_disponiveis = get_anos_disponiveis()
     ano_padrao = anos_disponiveis[0] if anos_disponiveis else None
-
+    
+    categorias_disponiveis = get_categorias_disponiveis()
     # NOVO: Adiciona o filtro de ano
     with gr.Row():
         ano_dropdown = gr.Dropdown(anos_disponiveis, label="Selecione o Ano", value=ano_padrao, interactive=True)
@@ -756,21 +824,60 @@ Este dashboard é um estudo completo que une o backend de um Data Warehouse com 
                     vendas_por_cidade_plot = gr.Plot()
         
         with gr.TabItem("Categorias"):
+             # O Checkbox de "Selecionar Tudo"
+            select_all_checkbox = gr.Checkbox(
+                    label="Selecionar Todas as Categorias",
+                    value=False
+                )
+            categorias_dropdown = gr.Dropdown(
+                choices=categorias_disponiveis,
+                label="Selecione a(s) Categoria(s)",
+                multiselect=True,
+                value=[categorias_disponiveis[0]] if categorias_disponiveis else []
+                )
             with gr.Row():
                 with gr.Column():
                     gr.Markdown("### Categoria por Faturamento Bruto")
                     categoria_por_faturamento_bruto = gr.Plot()
 
-    all_outputs = (vendas_por_mes_plot, vendas_por_canal_plot, vendas_por_categoria_plot, vendas_por_cidade_plot,categoria_por_faturamento_bruto )
+    # Saídas para a aba de Análise Geral
+    all_outputs = [
+        vendas_por_mes_plot,
+        vendas_por_canal_plot,
+        vendas_por_categoria_plot,
+        vendas_por_cidade_plot,
+        categoria_por_faturamento_bruto
+    ]
     
-    # Configura a interatividade
+    # Saídas para a aba de Categorias (apenas um gráfico)
+    categoria_output = [categoria_por_faturamento_bruto]
+
+    # Conecta a função de atualização a ambos os dropdowns
+    # O dropdown de ano atualiza TODOS os gráficos
     ano_dropdown.change(
         fn=update_all_plots,
-        inputs=ano_dropdown,
+        inputs=[ano_dropdown, categorias_dropdown],
         outputs=all_outputs
     )
     
-    # Inicializa todos os gráficos
-    demo.load(fn=lambda: update_all_plots(ano_padrao), inputs=None, outputs=all_outputs)
+    # O checkbox atualiza o dropdown
+    select_all_checkbox.change(
+        fn=handle_select_all_categories,
+        inputs=[select_all_checkbox, gr.State(categorias_disponiveis), categorias_dropdown],
+        outputs=categorias_dropdown
+    )
+    # O dropdown de categorias agora atualiza APENAS o gráfico de categoria
+    categorias_dropdown.change(
+        fn=update_categoria_plot,
+        inputs=[ano_dropdown, categorias_dropdown],
+        outputs=categoria_output # Note que a saída é só o gráfico desta aba
+    )
+
+    # Inicializa todos os gráficos ao carregar a página
+    demo.load(
+        fn=update_all_plots,
+        inputs=[ano_dropdown, categorias_dropdown],
+        outputs=all_outputs
+    )
 
 demo.launch()

@@ -6,12 +6,13 @@ from dotenv import load_dotenv #utilizado para ler a chave do API Gemini
 import re
 import pandas as pd
 import psycopg2
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
 import os
 from io import BytesIO
 import base64
 import plotly.express as px
 import plotly.graph_objects as go
+import numpy as np
 
 # DB_HOST = os.getenv("DB_HOST")
 # DB_NAME = os.getenv("DB_NAME")
@@ -132,10 +133,20 @@ def execute_ai_query(pergunta_usuario):
             df = pd.DataFrame(dados, columns=colunas)
             
             # --- CORREÇÃO ADICIONADA AQUI ---
-            # Verifica se a coluna 'valor_total_vendas' existe no DataFrame
-            if 'valor_total_vendas' in df.columns:
-                # Aplica formatação de número com duas casas decimais e separador de milhar
-                df['valor_total_vendas'] = df['valor_total_vendas'].apply(lambda x: f'{x:,.2f}')
+            # Verifica as colunas se for do tipo numérico irá corrigir formatação
+            for col in df.columns:
+                try:
+                    # Tenta converter a coluna inteira para um tipo numérico
+                    df[col] = pd.to_numeric(df[col], errors='raise')
+                    
+                    # Verifica se a coluna agora é de tipo numérico
+                    if pd.api.types.is_numeric_dtype(df[col]):
+                        # Aplica a formatação de número com duas casas decimais
+                        df[col] = df[col].apply(lambda x: f'{x:,.2f}' if pd.notnull(x) else None)
+                except (ValueError, TypeError):
+                    # Ignora a coluna se a conversão falhar (não é um número)
+                    pass
+          
             # -------------------------------
             
             return df.to_markdown(index=False)
